@@ -1,4 +1,5 @@
 import { type Client, createClient } from "@spree/sdk";
+import { createMediaOriginFetch } from "./media-origin";
 import type { Surface } from "./surface";
 import type { SpreeNextConfig } from "./types";
 
@@ -16,6 +17,9 @@ export function initSpreeNext(config: SpreeNextConfig): void {
   _client = createClient({
     baseUrl: config.baseUrl,
     publishableKey: config.publishableKey,
+    // Rewrite private-host (e.g. localhost) asset URLs returned by the API
+    // to the public origin so product media loads behind tunnels/proxies.
+    fetch: createMediaOriginFetch(config.baseUrl),
   });
 }
 
@@ -101,6 +105,7 @@ export function getWholesaleClient(): Client {
     baseUrl: config.baseUrl,
     publishableKey,
     channel,
+    fetch: createMediaOriginFetch(config.baseUrl),
   });
   return _wholesaleClient;
 }
