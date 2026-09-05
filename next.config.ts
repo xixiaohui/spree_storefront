@@ -2,8 +2,23 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import type { RemotePattern } from "next/dist/shared/lib/image-config";
 import createNextIntlPlugin from "next-intl/plugin";
+import { isUsableSentryDsn, isUsableSentryValue } from "./src/lib/sentry-guard";
 
 const withNextIntl = createNextIntlPlugin();
+
+// Wire up Sentry (runtime init + release/source-map upload) only when real
+// credentials are present. `.env.example` placeholders (your-org, your-project,
+// your-auth-token, examplePublicKey DSN) previously enabled the plugin and made
+// sentry-cli abort production builds with "Project not found".
+const sentryDsn = process.env.SENTRY_DSN?.trim() || "";
+const sentryOrg = process.env.SENTRY_ORG?.trim() || "";
+const sentryProject = process.env.SENTRY_PROJECT?.trim() || "";
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim() || "";
+const sentryConfigured =
+  isUsableSentryDsn(sentryDsn) &&
+  isUsableSentryValue(sentryOrg) &&
+  isUsableSentryValue(sentryProject) &&
+  isUsableSentryValue(sentryAuthToken);
 
 /**
  * Allow product/asset images served by the configured Spree backend. Spree
@@ -39,7 +54,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: ["shop.lvh.me", "*.trycloudflare.com", "192.168.33.13"],
   env: {
-    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN || "",
+    NEXT_PUBLIC_SENTRY_DSN: sentryConfigured ? sentryDsn : "",
   },
   transpilePackages: ["@spree/sdk"],
   reactCompiler: true,
@@ -76,11 +91,11 @@ const nextConfig: NextConfig = {
 
 const configWithIntl = withNextIntl(nextConfig);
 
-export default process.env.SENTRY_DSN
+export default sentryConfigured
   ? withSentryConfig(configWithIntl, {
-      org: process.env.SENTRY_ORG,
-      project: process.env.SENTRY_PROJECT,
-      authToken: process.env.SENTRY_AUTH_TOKEN,
+      org: sentryOrg,
+      project: sentryProject,
+      authToken: sentryAuthToken,
       silent: !process.env.CI,
 
       // Upload a larger set of source maps for prettier stack traces (increases build time)

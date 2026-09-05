@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { isUsableSentryDsn } from "./lib/sentry-guard";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -7,7 +8,9 @@ const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const sendDefaultPii =
   process.env.NEXT_PUBLIC_SENTRY_SEND_DEFAULT_PII === "true";
 
-if (dsn) {
+const sentryEnabled = isUsableSentryDsn(dsn);
+
+if (sentryEnabled) {
   Sentry.init({
     dsn,
     sendDefaultPii,
@@ -15,6 +18,6 @@ if (dsn) {
   });
 }
 
-export const onRouterTransitionStart = dsn
+export const onRouterTransitionStart = sentryEnabled
   ? Sentry.captureRouterTransitionStart
   : undefined;

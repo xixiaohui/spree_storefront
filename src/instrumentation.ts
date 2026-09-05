@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { isUsableSentryDsn } from "./lib/sentry-guard";
 
 export async function register() {
   const dsn = process.env.SENTRY_DSN;
@@ -7,7 +8,7 @@ export async function register() {
   // Defaults to false for privacy. Set SENTRY_SEND_DEFAULT_PII=true to enable.
   const sendDefaultPii = process.env.SENTRY_SEND_DEFAULT_PII === "true";
 
-  if (dsn) {
+  if (isUsableSentryDsn(dsn)) {
     Sentry.init({
       dsn,
       sendDefaultPii,
